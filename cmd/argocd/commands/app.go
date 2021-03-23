@@ -883,7 +883,11 @@ func NewApplicationDiffCommand(clientOpts *argocdclient.ClientOptions) *cobra.Co
 					}
 
 					foundDiffs = true
-					_ = cli.PrintDiff(item.key.Name, live, target)
+					// skip secrets entirely
+					secretHandler := func(n string, l *unstructured.Unstructured, t *unstructured.Unstructured) error {
+						return nil
+					}
+					_ = cli.PrintDiffWithSecretHandler(item.key.Name, live, target, secretHandler)
 				}
 			}
 			if foundDiffs {

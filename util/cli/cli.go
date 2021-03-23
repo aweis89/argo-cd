@@ -259,6 +259,21 @@ func InteractiveEdit(filePattern string, data []byte, save func(input []byte) er
 	}
 }
 
+// PrintDiffWithSecretHandler calls PrintDiff with provided args if on secret is present
+// Otherwise, it calls the secretHandler with provided args.
+func PrintDiffWithSecretHandler(
+	name string,
+	live *unstructured.Unstructured,
+	target *unstructured.Unstructured,
+	secretHandler func(string, *unstructured.Unstructured, *unstructured.Unstructured) error,
+) error {
+	secretKind := "Secret"
+	if live.GetKind() == secretKind || target.GetKind() == secretKind {
+		return secretHandler(name, live, target)
+	}
+	return PrintDiff(name, live, target)
+}
+
 // PrintDiff prints a diff between two unstructured objects to stdout using an external diff utility
 // Honors the diff utility set in the KUBECTL_EXTERNAL_DIFF environment variable
 func PrintDiff(name string, live *unstructured.Unstructured, target *unstructured.Unstructured) error {
