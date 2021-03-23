@@ -556,6 +556,7 @@ func NewApplicationUnsetCommand(clientOpts *argocdclient.ClientOptions) *cobra.C
 		namePrefix       bool
 		kustomizeVersion bool
 		kustomizeImages  []string
+		pluginEnvs       []string
 		appOpts          cmdutil.AppOptions
 	)
 	var command = &cobra.Command{
@@ -661,9 +662,22 @@ func NewApplicationUnsetCommand(clientOpts *argocdclient.ClientOptions) *cobra.C
 						}
 					}
 				}
-				if !updated {
-					return
+			}
+
+			if app.Spec.Source.Plugin != nil {
+				if len(pluginEnvs) == 0 {
+					c.HelpFunc()(c, args)
+					os.Exit(1)
 				}
+				for _, env := range pluginEnvs {
+					err = app.Spec.Source.Plugin.RemoveEnvEntry(env)
+					errors.CheckError(err)
+				}
+				updated = true
+			}
+
+			if !updated {
+				return
 			}
 
 			cmdutil.SetAppSpecOptions(c.Flags(), &app.Spec, &appOpts)
@@ -682,6 +696,7 @@ func NewApplicationUnsetCommand(clientOpts *argocdclient.ClientOptions) *cobra.C
 	command.Flags().BoolVar(&namePrefix, "nameprefix", false, "Kustomize nameprefix")
 	command.Flags().BoolVar(&kustomizeVersion, "kustomize-version", false, "Kustomize version")
 	command.Flags().StringArrayVar(&kustomizeImages, "kustomize-image", []string{}, "Kustomize images name (e.g. --kustomize-image node --kustomize-image mysql)")
+	command.Flags().StringArrayVar(&pluginEnvs, "plugin-env", []string{}, "Unset plugin env variables (e.g --plugin-env name)")
 	return command
 }
 
@@ -1092,7 +1107,7 @@ func NewApplicationListCommand(clientOpts *argocdclient.ClientOptions) *cobra.Co
 	command.Flags().StringVarP(&output, "output", "o", "wide", "Output format. One of: wide|name|json|yaml")
 	command.Flags().StringVarP(&selector, "selector", "l", "", "List apps by label")
 	command.Flags().StringArrayVarP(&projects, "project", "p", []string{}, "Filter by project name")
-	command.Flags().StringVarP(&selector, "repo", "r", "", "List apps by source repo URL")
+	command.Flags().StringVarP(&repo, "repo", "r", "", "List apps by source repo URL")
 	return command
 }
 
